@@ -45,7 +45,23 @@ Tested on Android 16 (Samsung SM-A156U1). Minimum Android API 24 (required by
 | **Force GPS Fix** | Requests a fresh, high-accuracy fix: `LocationAccuracy.best` + `forceLocationManager: true` (legacy Android LocationManager = real GPS provider, not fused/network, not last-known). 60 s timeout. |
 | **Last GPS sync** | Live "x min ago" / "Never", plus offset, fix age, accuracy and which mechanism produced the offset. |
 | Progress / errors | Spinner + "Searching for satellites…" while fixing; clear error state on timeout/denied/services-off with retry. |
-| Settings (gear → bottom sheet) | Local 12/24-hour toggle; appearance System/Light/Dark (defaults to Dark); "Reset to system clock" when a sync is active. All persisted via `shared_preferences`. |
+| Layout | Portrait: UTC emphasised above LOCAL. Landscape: the two clocks side by side. Scrolls if the viewport is too short (split-screen). |
+| Settings (gear → bottom sheet) | Local 12/24-hour toggle; appearance System/Light/Dark (defaults to Dark); floating UTC chip (Android); "Reset to system clock" when a sync is active. All persisted via `shared_preferences`. |
+
+## Floating UTC chip (Android)
+
+Settings → **Floating UTC chip** shows a small always-on-top pill with the
+GPS-corrected UTC time over any other app — handy for checking or nudging
+**JS8Call**'s clock (its Monitor screen has a manual *Time Drift* field, and
+Settings → Timing → *Auto time sync*) without switching apps.
+
+- Amber dot = system clock, green dot = GPS-synced. Tap the chip to expand
+  (date + "synced N min ago"); tap again to collapse. Drag it anywhere.
+- **First time you enable it**, Android opens its *"Appear on top" / "Display
+  over other apps"* screen — flip the switch on for GPS UTC Clock and go back.
+  After that the in-app toggle just works.
+- Turn it off from the same Settings switch. (An overlay window can't close
+  itself, so there is no close button on the chip.)
 
 ## Trusted-time math
 
@@ -65,23 +81,38 @@ are in-memory only; a restart falls back to the system clock until the next fix.
 
 ## Files
 
-- `lib/main.dart` — app root, wires up services.
+- `lib/main.dart` — app root, wires up services, overlay entry point.
 - `lib/clock_screen.dart` — the single screen + settings bottom sheet.
 - `lib/gps_time_controller.dart` — GPS sync workflow, offset calculation, state.
-- `lib/settings_service.dart` — persisted 12/24-hour + theme-mode preferences.
+- `lib/settings_service.dart` — persisted 12/24-hour, theme-mode, overlay prefs.
 - `lib/time_format.dart` — hand-rolled (locale-free) formatters.
-- `android/app/src/main/AndroidManifest.xml` — `ACCESS_FINE_LOCATION` (+ coarse), GPS feature.
+- `lib/utc_overlay.dart` — the floating chip widget (runs in its own engine).
+- `lib/utc_overlay_controller.dart` — overlay permission / show-hide / offset feed.
+- `tool/make_icon.py` — regenerates the launcher-icon assets from `assets/icon/GPS_UTC_icon.png`.
+- `android/app/src/main/AndroidManifest.xml` — location + `SYSTEM_ALERT_WINDOW` +
+  foreground-service permissions.
 - `android/app/build.gradle.kts` — `minSdk` pinned to 24.
+
+## Known limitations
+
+- **`FOREGROUND_SERVICE_SPECIAL_USE`** (used by the overlay) needs a written
+  justification for a Play Store listing. Fine for sideloading.
+- The `gps_time_plugin` build applies the Kotlin Gradle Plugin, which prints a
+  deprecation warning; a future Flutter may reject it until the plugin is
+  updated. Builds fine today.
+- The floating chip is **Android only** — there is no iOS equivalent to
+  `SYSTEM_ALERT_WINDOW`.
 
 ## iOS later
 
-The code has no Android-only assumptions outside `gps_time_controller.dart`'s
-`AndroidSettings`. `ios/Runner/Info.plist` already carries
-`NSLocationWhenInUseUsageDescription`. To finish an iOS port: replace the
-`AndroidSettings(...)` in `forceGpsFix()` with `AppleSettings(accuracy:
-LocationAccuracy.best)` (or branch on `Platform`), then `flutter run` on iOS. Note
-iOS has no raw monotonic GPS time, so `gps_time_plugin` there uses
-`CLLocation.timestamp` at fix receipt.
+The core clock has no Android-only assumptions outside `gps_time_controller.dart`'s
+`AndroidSettings`, and the overlay is fully guarded behind `Platform.isAndroid`
+(`flutter_overlay_window` ships no iOS code, so it's simply absent there).
+`ios/Runner/Info.plist` already carries `NSLocationWhenInUseUsageDescription`.
+To finish an iOS port: replace the `AndroidSettings(...)` in `forceGpsFix()` with
+`AppleSettings(accuracy: LocationAccuracy.best)` (or branch on `Platform`), then
+`flutter run` on iOS. Note iOS has no raw monotonic GPS time, so `gps_time_plugin`
+there uses `CLLocation.timestamp` at fix receipt.
 
 ## Releasing
 
@@ -91,9 +122,9 @@ CI (`.github/workflows/ci.yml`) runs `dart format` check, `flutter analyze` and
 To cut a release APK:
 
 ```bash
-# bump `version:` in pubspec.yaml first, e.g. 1.0.0+1 -> 1.1.0+2
-git tag v1.1.0
-git push origin v1.1.0
+# bump `version:` in pubspec.yaml first, e.g. 1.1.0+4 -> 1.2.0+5
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 `.github/workflows/release.yml` then builds `flutter build apk --release` and
@@ -101,7 +132,7 @@ attaches two copies to the GitHub Release:
 
 - `gps-utc-clock.apk` — constant name, so
   `releases/latest/download/gps-utc-clock.apk` always resolves to the newest build
-- `gps-utc-clock-v1.1.0.apk` — versioned copy
+- `gps-utc-clock-vX.Y.Z.apk` — versioned copy
 
 Signing uses the debug key; swap in a real keystore
 (`android/app/build.gradle.kts` + repo secrets) before any Play Store submission.

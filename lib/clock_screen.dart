@@ -433,8 +433,8 @@ class _SettingsSheet extends StatelessWidget {
                     subtitle: Text(
                       overlay.error ??
                           (overlay.active
-                              ? 'Showing over other apps. Tap it to expand, '
-                                    'long-press to close.'
+                              ? 'Showing over other apps. Tap it to expand; '
+                                    'toggle off here to hide it.'
                               : 'Show trusted UTC on top of other apps '
                                     '(e.g. JS8Call).'),
                       style: overlay.error != null

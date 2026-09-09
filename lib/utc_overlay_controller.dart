@@ -130,13 +130,11 @@ class UtcOverlayController extends ChangeNotifier {
   }
 
   void _onMessage(dynamic event) {
+    // Note: on the tested devices the overlay->app direction of shareData does
+    // not deliver, so this is best-effort. app->overlay (the heartbeat) is what
+    // keeps the chip fed; the Settings toggle is the reliable off switch.
     if (event is! Map) return;
-    switch (event['action']) {
-      case 'disable': // the chip's "close" gesture — it can't close itself
-        disable();
-      case 'request': // a freshly (re)started overlay asking for current state
-        _pushIfActive();
-    }
+    if (event['action'] == 'request') _pushIfActive();
   }
 
   @override

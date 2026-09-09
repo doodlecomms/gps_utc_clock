@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
@@ -97,17 +96,12 @@ class _UtcChipState extends State<_UtcChip> {
 
   Future<void> _resize(int wDp, int hDp) async {
     // The overlay engine may not have registered its method channel yet right
-    // after start, so retry a few times. The chip content also clips (via the
-    // SingleChildScrollView) so a missed resize never shows an overflow banner.
+    // after start, so retry a few times.
     for (var attempt = 0; attempt < 4; attempt++) {
       try {
         await FlutterOverlayWindow.resizeOverlay(wDp, hDp, true);
         return;
-      } catch (e) {
-        developer.log(
-          'resizeOverlay attempt $attempt failed: $e',
-          name: 'gps_utc_clock.overlay',
-        );
+      } catch (_) {
         await Future<void>.delayed(const Duration(milliseconds: 250));
       }
     }
@@ -121,112 +115,82 @@ class _UtcChipState extends State<_UtcChip> {
     );
   }
 
-  /// Best-effort close. The overlay engine can't call `closeOverlay()` itself,
-  /// so it asks the app; the Settings toggle is the guaranteed off switch.
-  Future<void> _close() =>
-      FlutterOverlayWindow.shareData({'action': 'disable'});
-
-  Widget _miniButton(String label, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 10, color: Colors.white70),
-      ),
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     final accent = _synced ? _mint : _amber;
 
+    final timeRow = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          formatTime24(_utcNow),
+          style: const TextStyle(
+            fontFamily: 'monospace',
+            fontFeatures: [FontFeature.tabularFigures()],
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Text(
+            _expanded ? 'UTC ▲' : 'UTC ▾',
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.white70,
+            ),
+          ),
+        ),
+      ],
+    );
+
     return Align(
       alignment: Alignment.topLeft,
       child: GestureDetector(
+        // Tap anywhere on the chip toggles expand/collapse. (The overlay engine
+        // can't close its own window, so there's no close button — use the
+        // Settings toggle in the app.)
         onTap: _toggleExpanded,
-        onLongPress: _close,
         behavior: HitTestBehavior.opaque,
-        child: Container(
+        child: DecoratedBox(
           decoration: BoxDecoration(
             color: const Color(0xF20B0F0E),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: accent.withValues(alpha: 0.55)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          // Clip rather than overflow if resizeOverlay didn't take effect.
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: accent,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      formatTime24(_utcNow),
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontFeatures: [FontFeature.tabularFigures()],
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 1,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Padding(
-                      padding: EdgeInsets.only(top: 3),
-                      child: Text(
-                        'UTC',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                timeRow,
                 if (_expanded) ...[
                   const SizedBox(height: 6),
                   Text(
                     formatDateIso(_utcNow),
                     style: const TextStyle(fontSize: 11, color: Colors.white70),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     _synced
                         ? 'GPS-synced · ${_syncedAt == null ? 'now' : formatAgo(DateTime.now().difference(_syncedAt!))}'
                         : 'System clock · not GPS-verified',
                     style: TextStyle(fontSize: 11, color: accent),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _miniButton('Collapse', _toggleExpanded),
-                      const SizedBox(width: 8),
-                      _miniButton('Close', _close),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 5),
                   const Text(
-                    'or turn off in the app Settings',
+                    'tap to collapse · turn off in app Settings',
                     style: TextStyle(fontSize: 9, color: Colors.white38),
                   ),
                 ],

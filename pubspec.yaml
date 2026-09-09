@@ -51,7 +51,7 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.4
 
 # App launcher icon generation: `dart run flutter_launcher_icons`
-# icon.png / icon_foreground.png are built from source_icon.png by tool/make_icon.py.
+# icon.png / icon_foreground.png are built from GPS_UTC_icon.png by tool/make_icon.py.
 flutter_launcher_icons:
   image_path: "assets/icon/icon.png"
   min_sdk_android: 24

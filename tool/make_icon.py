@@ -1,6 +1,6 @@
 """Build the launcher-icon assets from the hand-made source art.
 
-Input : assets/icon/source_icon.png  (square, art already composed on a dark card
+Input : assets/icon/GPS_UTC_icon.png  (square, art already composed on a dark card
                                       with a thin white margin/rounded corners)
 Output: assets/icon/icon.png             full-bleed, corners filled (iOS + legacy Android)
         assets/icon/icon_foreground.png  padded, transparent  (Android adaptive foreground)
@@ -11,7 +11,7 @@ icons with `dart run flutter_launcher_icons`.
 
 from PIL import Image, ImageDraw
 
-SRC = "assets/icon/source_icon.png"
+SRC = "assets/icon/GPS_UTC_icon.png"
 BG = (13, 23, 29)  # #0D171D — the dark card colour in the source art
 SIZE = 1024
 MARGIN = 58  # px of white border to crop off the source before scaling

@@ -1,14 +1,17 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Persisted user settings. Currently just the local-time display format.
+/// Persisted user settings: local-time display format and app theme.
 ///
-/// The choice is stored with `shared_preferences` so it survives app restarts.
+/// Choices are stored with `shared_preferences` so they survive app restarts.
 class SettingsService extends ChangeNotifier {
   static const _kLocalUse24h = 'local_time_use_24h';
+  static const _kThemeMode = 'theme_mode';
 
   bool _loaded = false;
   bool _localUse24h = false; // default: 12-hour on first launch
+  ThemeMode _themeMode = ThemeMode.dark; // default: dark on first launch
 
   /// Whether initial load from disk has completed.
   bool get loaded => _loaded;
@@ -19,9 +22,13 @@ class SettingsService extends ChangeNotifier {
   /// Never affects the UTC display, which is always 24-hour.
   bool get localUse24h => _localUse24h;
 
+  /// System / light / dark. Applied to `MaterialApp.themeMode`.
+  ThemeMode get themeMode => _themeMode;
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _localUse24h = prefs.getBool(_kLocalUse24h) ?? false;
+    _themeMode = _parseThemeMode(prefs.getString(_kThemeMode));
     _loaded = true;
     notifyListeners();
   }
@@ -33,4 +40,19 @@ class SettingsService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kLocalUse24h, value);
   }
+
+  Future<void> setThemeMode(ThemeMode value) async {
+    if (_themeMode == value) return;
+    _themeMode = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kThemeMode, value.name);
+  }
+
+  static ThemeMode _parseThemeMode(String? name) => switch (name) {
+    'system' => ThemeMode.system,
+    'light' => ThemeMode.light,
+    'dark' => ThemeMode.dark,
+    _ => ThemeMode.dark, // unset / unrecognised -> default
+  };
 }

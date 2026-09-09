@@ -33,20 +33,29 @@ class _GpsUtcClockAppState extends State<GpsUtcClockApp> {
     super.dispose();
   }
 
+  static ThemeData _theme(Brightness brightness) => ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: const Color(0xFF00E5A0),
+      brightness: brightness,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'GPS UTC Clock',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00E5A0),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: ClockScreen(settings: _settings, gps: _gps),
+    return ListenableBuilder(
+      listenable: _settings,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'GPS UTC Clock',
+          debugShowCheckedModeBanner: false,
+          theme: _theme(Brightness.light),
+          darkTheme: _theme(Brightness.dark),
+          themeMode: _settings.themeMode,
+          home: ClockScreen(settings: _settings, gps: _gps),
+        );
+      },
     );
   }
 }

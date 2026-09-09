@@ -45,7 +45,7 @@ Tested on Android 16 (Samsung SM-A156U1). Minimum Android API 24 (required by
 | **Force GPS Fix** | Requests a fresh, high-accuracy fix: `LocationAccuracy.best` + `forceLocationManager: true` (legacy Android LocationManager = real GPS provider, not fused/network, not last-known). 60 s timeout. |
 | **Last GPS sync** | Live "x min ago" / "Never", plus offset, fix age, accuracy and which mechanism produced the offset. |
 | Progress / errors | Spinner + "Searching for satellites…" while fixing; clear error state on timeout/denied/services-off with retry. |
-| Settings (gear → bottom sheet) | Local 12/24-hour toggle; "Reset to system clock" when a sync is active. |
+| Settings (gear → bottom sheet) | Local 12/24-hour toggle; appearance System/Light/Dark (defaults to Dark); "Reset to system clock" when a sync is active. All persisted via `shared_preferences`. |
 
 ## Trusted-time math
 
@@ -68,7 +68,7 @@ are in-memory only; a restart falls back to the system clock until the next fix.
 - `lib/main.dart` — app root, wires up services.
 - `lib/clock_screen.dart` — the single screen + settings bottom sheet.
 - `lib/gps_time_controller.dart` — GPS sync workflow, offset calculation, state.
-- `lib/settings_service.dart` — persisted 12/24-hour preference.
+- `lib/settings_service.dart` — persisted 12/24-hour + theme-mode preferences.
 - `lib/time_format.dart` — hand-rolled (locale-free) formatters.
 - `android/app/src/main/AndroidManifest.xml` — `ACCESS_FINE_LOCATION` (+ coarse), GPS feature.
 - `android/app/build.gradle.kts` — `minSdk` pinned to 24.

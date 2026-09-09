@@ -373,17 +373,40 @@ class _SettingsSheet extends StatelessWidget {
                   value: settings.localUse24h,
                   onChanged: settings.setLocalUse24h,
                 ),
-                const Divider(height: 8),
                 const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 4),
+                  padding: EdgeInsets.only(top: 4, bottom: 4),
                   child: Text(
                     'UTC is always shown in 24-hour format and is never affected '
                     'by this toggle.',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
+                const Divider(height: 20),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      'Appearance',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('System'),
+                    ),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+                  ],
+                  selected: {settings.themeMode},
+                  onSelectionChanged: (s) => settings.setThemeMode(s.first),
+                ),
                 if (gps.isSynced) ...[
-                  const SizedBox(height: 12),
+                  const Divider(height: 24),
                   OutlinedButton.icon(
                     onPressed: () {
                       gps.resetToSystemClock();

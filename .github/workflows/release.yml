@@ -1,0 +1,55 @@
+name: Release APK
+
+# Push a tag like `v1.0.0` to build a release APK and attach it to a GitHub
+# Release. Can also be run manually from the Actions tab.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.7
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter test
+
+      # Signed with the debug key (see android/app/build.gradle.kts). Fine for
+      # sideloading; swap in a real keystore before any Play Store upload.
+      - run: flutter build apk --release
+
+      - name: Name the APK after the tag
+        run: |
+          mkdir -p dist
+          NAME="gps-utc-clock-${GITHUB_REF_NAME:-manual}.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/${NAME}"
+          echo "Built dist/${NAME}"
+
+      - name: Attach APK to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          generate_release_notes: true
+
+      - name: Upload APK as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gps-utc-clock-apk
+          path: dist/*.apk

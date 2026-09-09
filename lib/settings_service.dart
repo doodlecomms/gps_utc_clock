@@ -8,10 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class SettingsService extends ChangeNotifier {
   static const _kLocalUse24h = 'local_time_use_24h';
   static const _kThemeMode = 'theme_mode';
+  static const _kOverlayEnabled = 'overlay_enabled';
 
   bool _loaded = false;
   bool _localUse24h = false; // default: 12-hour on first launch
   ThemeMode _themeMode = ThemeMode.dark; // default: dark on first launch
+  bool _overlayEnabled = false; // floating UTC chip over other apps (Android)
 
   /// Whether initial load from disk has completed.
   bool get loaded => _loaded;
@@ -25,10 +27,15 @@ class SettingsService extends ChangeNotifier {
   /// System / light / dark. Applied to `MaterialApp.themeMode`.
   ThemeMode get themeMode => _themeMode;
 
+  /// Whether the user wants the floating UTC chip shown over other apps.
+  /// The actual overlay/permission state is owned by `UtcOverlayController`.
+  bool get overlayEnabled => _overlayEnabled;
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _localUse24h = prefs.getBool(_kLocalUse24h) ?? false;
     _themeMode = _parseThemeMode(prefs.getString(_kThemeMode));
+    _overlayEnabled = prefs.getBool(_kOverlayEnabled) ?? false;
     _loaded = true;
     notifyListeners();
   }
@@ -47,6 +54,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kThemeMode, value.name);
+  }
+
+  Future<void> setOverlayEnabled(bool value) async {
+    if (_overlayEnabled == value) return;
+    _overlayEnabled = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kOverlayEnabled, value);
   }
 
   static ThemeMode _parseThemeMode(String? name) => switch (name) {

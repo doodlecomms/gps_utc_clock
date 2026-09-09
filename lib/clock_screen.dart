@@ -5,13 +5,20 @@ import 'package:flutter/material.dart';
 import 'gps_time_controller.dart';
 import 'settings_service.dart';
 import 'time_format.dart';
+import 'utc_overlay_controller.dart';
 
 /// The whole app is this one screen. A gear icon opens a settings bottom sheet.
 class ClockScreen extends StatefulWidget {
-  const ClockScreen({super.key, required this.settings, required this.gps});
+  const ClockScreen({
+    super.key,
+    required this.settings,
+    required this.gps,
+    required this.overlay,
+  });
 
   final SettingsService settings;
   final GpsTimeController gps;
+  final UtcOverlayController overlay;
 
   @override
   State<ClockScreen> createState() => _ClockScreenState();
@@ -39,8 +46,12 @@ class _ClockScreenState extends State<ClockScreen> {
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
-      builder: (_) =>
-          _SettingsSheet(settings: widget.settings, gps: widget.gps),
+      isScrollControlled: true,
+      builder: (_) => _SettingsSheet(
+        settings: widget.settings,
+        gps: widget.gps,
+        overlay: widget.overlay,
+      ),
     );
   }
 
@@ -48,7 +59,11 @@ class _ClockScreenState extends State<ClockScreen> {
   Widget build(BuildContext context) {
     // Rebuild whenever settings or GPS state change (in addition to the ticker).
     return AnimatedBuilder(
-      animation: Listenable.merge([widget.settings, widget.gps]),
+      animation: Listenable.merge([
+        widget.settings,
+        widget.gps,
+        widget.overlay,
+      ]),
       builder: (context, _) {
         final gps = widget.gps;
         final nowUtc = gps.trustedUtcNow();
@@ -340,18 +355,23 @@ class _SyncPanel extends StatelessWidget {
 }
 
 class _SettingsSheet extends StatelessWidget {
-  const _SettingsSheet({required this.settings, required this.gps});
+  const _SettingsSheet({
+    required this.settings,
+    required this.gps,
+    required this.overlay,
+  });
 
   final SettingsService settings;
   final GpsTimeController gps;
+  final UtcOverlayController overlay;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([settings, gps]),
+      animation: Listenable.merge([settings, gps, overlay]),
       builder: (context, _) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -405,6 +425,29 @@ class _SettingsSheet extends StatelessWidget {
                   selected: {settings.themeMode},
                   onSelectionChanged: (s) => settings.setThemeMode(s.first),
                 ),
+                if (overlay.supported) ...[
+                  const Divider(height: 20),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Floating UTC chip'),
+                    subtitle: Text(
+                      overlay.error ??
+                          (overlay.active
+                              ? 'Showing over other apps. Tap it to expand, '
+                                    'long-press to close.'
+                              : 'Show trusted UTC on top of other apps '
+                                    '(e.g. JS8Call).'),
+                      style: overlay.error != null
+                          ? TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            )
+                          : null,
+                    ),
+                    isThreeLine: true,
+                    value: overlay.active,
+                    onChanged: (_) => overlay.toggle(),
+                  ),
+                ],
                 if (gps.isSynced) ...[
                   const Divider(height: 24),
                   OutlinedButton.icon(

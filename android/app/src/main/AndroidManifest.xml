@@ -11,6 +11,13 @@
         android:name="android.hardware.location.gps"
         android:required="false" />
 
+    <!-- Floating "trusted UTC" chip that can be shown over other apps (e.g. JS8Call).
+         Optional: only used after the user turns the overlay on in Settings. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:label="gps_utc_clock"
         android:name="${applicationName}"
@@ -37,6 +44,16 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Foreground service backing the floating UTC overlay (flutter_overlay_window). -->
+        <service
+            android:name="flutter.overlay.window.flutter_overlay_window.OverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Shows a floating GPS-derived UTC clock over other apps for time-sync verification" />
+        </service>
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -37,6 +37,7 @@ dependencies:
   geolocator: ^14.0.3
   gps_time_plugin: ^0.0.2
   shared_preferences: ^2.5.5
+  flutter_overlay_window: ^0.5.0
 
 dev_dependencies:
   flutter_test:

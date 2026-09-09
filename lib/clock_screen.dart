@@ -83,54 +83,91 @@ class _ClockScreenState extends State<ClockScreen> {
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _TimeSourceBanner(gps: gps),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _ClockBlock(
-                          label: 'UTC',
-                          time: formatTime24(nowUtc),
-                          caption: formatDateIso(nowUtc),
-                          emphasize: true,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final wide = constraints.maxWidth > constraints.maxHeight;
+                  // Landscape: same size for both, side by side. Portrait: UTC
+                  // emphasised larger, stacked.
+                  final utc = _ClockBlock(
+                    label: 'UTC',
+                    time: formatTime24(nowUtc),
+                    caption: formatDateIso(nowUtc),
+                    emphasize: true,
+                    digitSize: wide ? 46 : 68,
+                  );
+                  final local = _ClockBlock(
+                    label: 'LOCAL',
+                    time: widget.settings.localUse24h
+                        ? formatTime24(nowLocal)
+                        : formatTime12(nowLocal),
+                    caption:
+                        '${formatDateIso(nowLocal)}  ·  ${widget.settings.localUse24h ? '24-hour' : '12-hour'}',
+                    emphasize: false,
+                    digitSize: wide ? 46 : 44,
+                  );
+
+                  final clocks = wide
+                      ? Row(
+                          children: [
+                            Expanded(child: Center(child: utc)),
+                            Expanded(child: Center(child: local)),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [utc, const SizedBox(height: 36), local],
+                        );
+
+                  // Fill the viewport normally; scroll if it's too short to fit
+                  // (small landscape / split-screen).
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _TimeSourceBanner(gps: gps),
+                            Expanded(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minHeight: 140,
+                                ),
+                                child: clocks,
+                              ),
+                            ),
+                            _SyncPanel(gps: gps),
+                            const SizedBox(height: 12),
+                            FilledButton.icon(
+                              onPressed: gps.isSyncing ? null : gps.forceGpsFix,
+                              style: FilledButton.styleFrom(
+                                minimumSize: const Size.fromHeight(56),
+                                textStyle: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              icon: gps.isSyncing
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : const Icon(Icons.satellite_alt),
+                              label: Text(
+                                gps.isSyncing ? 'Searching…' : 'Force GPS Fix',
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 36),
-                        _ClockBlock(
-                          label: 'LOCAL',
-                          time: widget.settings.localUse24h
-                              ? formatTime24(nowLocal)
-                              : formatTime12(nowLocal),
-                          caption:
-                              '${formatDateIso(nowLocal)}  ·  ${widget.settings.localUse24h ? '24-hour' : '12-hour'}',
-                          emphasize: false,
-                        ),
-                      ],
-                    ),
-                  ),
-                  _SyncPanel(gps: gps),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: gps.isSyncing ? null : gps.forceGpsFix,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(56),
-                      textStyle: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    icon: gps.isSyncing
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          )
-                        : const Icon(Icons.satellite_alt),
-                    label: Text(gps.isSyncing ? 'Searching…' : 'Force GPS Fix'),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -147,17 +184,20 @@ class _ClockBlock extends StatelessWidget {
     required this.time,
     required this.caption,
     required this.emphasize,
+    required this.digitSize,
   });
 
   final String label;
   final String time;
   final String caption;
   final bool emphasize;
+  final double digitSize;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
@@ -169,15 +209,17 @@ class _ClockBlock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
+        // scaleDown keeps the digits on one line if the column is narrow.
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             time,
             maxLines: 1,
+            softWrap: false,
             style: TextStyle(
               fontFamily: 'monospace',
               fontFeatures: const [FontFeature.tabularFigures()],
-              fontSize: emphasize ? 68 : 44,
+              fontSize: digitSize,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.5,
               color: scheme.onSurface,

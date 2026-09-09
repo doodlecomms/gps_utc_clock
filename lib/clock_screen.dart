@@ -83,17 +83,20 @@ class _ClockScreenState extends State<ClockScreen> {
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final wide = constraints.maxWidth > constraints.maxHeight;
+              child: Builder(
+                builder: (context) {
+                  final wide =
+                      MediaQuery.orientationOf(context) ==
+                      Orientation.landscape;
                   // Landscape: same size for both, side by side. Portrait: UTC
                   // emphasised larger, stacked.
                   final utc = _ClockBlock(
                     label: 'UTC',
                     time: formatTime24(nowUtc),
-                    caption: formatDateIso(nowUtc),
+                    // Landscape shows the date once, under LOCAL.
+                    caption: wide ? '' : formatDateIso(nowUtc),
                     emphasize: true,
-                    digitSize: wide ? 46 : 68,
+                    digitSize: wide ? 42 : 68,
                   );
                   final local = _ClockBlock(
                     label: 'LOCAL',
@@ -103,69 +106,94 @@ class _ClockScreenState extends State<ClockScreen> {
                     caption:
                         '${formatDateIso(nowLocal)}  ·  ${widget.settings.localUse24h ? '24-hour' : '12-hour'}',
                     emphasize: false,
-                    digitSize: wide ? 46 : 44,
+                    digitSize: wide ? 42 : 44,
                   );
 
-                  final clocks = wide
-                      ? Row(
-                          children: [
-                            Expanded(child: Center(child: utc)),
-                            Expanded(child: Center(child: local)),
-                          ],
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [utc, const SizedBox(height: 36), local],
-                        );
-
-                  // Fill the viewport normally; scroll if it's too short to fit
-                  // (small landscape / split-screen).
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _TimeSourceBanner(gps: gps),
-                            Expanded(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minHeight: 140,
-                                ),
-                                child: clocks,
-                              ),
-                            ),
-                            _SyncPanel(gps: gps),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: gps.isSyncing ? null : gps.forceGpsFix,
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size.fromHeight(56),
-                                textStyle: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              icon: gps.isSyncing
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                      ),
-                                    )
-                                  : const Icon(Icons.satellite_alt),
-                              label: Text(
-                                gps.isSyncing ? 'Searching…' : 'Force GPS Fix',
-                              ),
-                            ),
-                          ],
-                        ),
+                  final forceButton = FilledButton.icon(
+                    onPressed: gps.isSyncing ? null : gps.forceGpsFix,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(56),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
+                    icon: gps.isSyncing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : const Icon(Icons.satellite_alt),
+                    label: Text(gps.isSyncing ? 'Searching…' : 'Force GPS Fix'),
+                  );
+
+                  if (wide) {
+                    // Landscape: clocks side by side, everything top-aligned and
+                    // scrollable so nothing is ever clipped.
+                    return SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _TimeSourceBanner(gps: gps),
+                          const SizedBox(height: 16),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topCenter,
+                                  child: utc,
+                                ),
+                              ),
+                              Expanded(
+                                child: Align(
+                                  alignment: Alignment.topCenter,
+                                  child: local,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          // Wide screen: sync info and the button sit side by side.
+                          Row(
+                            children: [
+                              Expanded(child: _SyncPanel(gps: gps)),
+                              const SizedBox(width: 12),
+                              SizedBox(width: 260, child: forceButton),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Portrait: fill the screen, clocks centred. FittedBox lets the
+                  // pair shrink rather than overflow on a very short viewport.
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _TimeSourceBanner(gps: gps),
+                      Expanded(
+                        child: Center(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                utc,
+                                const SizedBox(height: 36),
+                                local,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      _SyncPanel(gps: gps),
+                      const SizedBox(height: 12),
+                      forceButton,
+                    ],
                   );
                 },
               ),
@@ -226,11 +254,13 @@ class _ClockBlock extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          caption,
-          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-        ),
+        if (caption.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            caption,
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+        ],
       ],
     );
   }

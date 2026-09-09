@@ -9,6 +9,27 @@ const Duration kFixTimeout = Duration(seconds: 60);
 
 enum SyncStatus { never, searching, synced, error }
 
+/// Clock correction from `gps_time_plugin`'s already fix-age-adjusted trusted
+/// time: `trustedUtc - deviceUtc`, both sampled in the same native emission.
+/// Add the result to `DateTime.now().toUtc()` to get trusted UTC.
+Duration gpsOffsetFromTrustedTime({
+  required DateTime trustedUtc,
+  required DateTime deviceUtc,
+}) => trustedUtc.toUtc().difference(deviceUtc.toUtc());
+
+/// Clock correction from a raw GPS fix (the geolocator-only fallback path):
+/// `fixUtc - deviceUtcAtReceipt`.
+///
+/// This assumes the fix is fresh, which holds for a forced high-accuracy
+/// `getCurrentPosition` — it drives the GNSS hardware and returns a current fix,
+/// not a cached one. Without the monotonic clock we cannot separate a stale fix
+/// from a wrong system clock, so we do not try (an earlier version folded in a
+/// measured "age" and cancelled out exactly the error we were trying to show).
+Duration gpsOffsetFromRawFix({
+  required DateTime fixUtc,
+  required DateTime deviceUtcAtReceipt,
+}) => fixUtc.toUtc().difference(deviceUtcAtReceipt.toUtc());
+
 /// Result of a successful GPS time sync, kept in memory only.
 @immutable
 class GpsSyncInfo {
@@ -132,23 +153,26 @@ class GpsTimeController extends ChangeNotifier {
 
       if (st?.trustedTime != null && st?.deviceTime != null) {
         // Preferred path: fix-age-adjusted time from gps_time_plugin.
-        offset = st!.trustedTime!.toUtc().difference(st.deviceTime!.toUtc());
+        offset = gpsOffsetFromTrustedTime(
+          trustedUtc: st!.trustedTime!,
+          deviceUtc: st.deviceTime!,
+        );
         fixAge = st.ageSeconds ?? 0;
         accuracy = st.accuracy ?? _accuracyOf(position);
         source = 'gps_time_plugin (fix-age adjusted)';
       } else {
-        // Fallback: replicate the offset approach with the raw geolocator fix.
-        //   offset0 = fixUtcTimestamp - deviceUtcWhenReceived
-        // A forced high-accuracy fix is delivered fresh, so its age is normally
-        // ~0. If it wasn't, that age shows up as error in offset0, so fold it
-        // back out to keep offset an estimate of (trustedUtc - deviceUtc) now.
-        final offset0 = position.timestamp.toUtc().difference(deviceUtcAtFix);
+        // Fallback: raw geolocator fix timestamp vs the instant we received it.
+        offset = gpsOffsetFromRawFix(
+          fixUtc: position.timestamp,
+          deviceUtcAtReceipt: deviceUtcAtFix,
+        );
+        // Shown for transparency; this delta is (fix age + system-clock error)
+        // combined, which we can't split without the monotonic clock.
         fixAge = deviceUtcAtFix
             .difference(position.timestamp.toUtc())
             .inSeconds;
-        offset = offset0 + Duration(seconds: fixAge > 0 ? fixAge : 0);
         accuracy = _accuracyOf(position);
-        source = 'geolocator fix timestamp';
+        source = 'geolocator timestamp (no monotonic clock)';
       }
 
       _sync = GpsSyncInfo(

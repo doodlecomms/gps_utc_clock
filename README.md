@@ -25,6 +25,16 @@ Android warns about the source — expected for a sideloaded utility.
 
 ---
 
+## Screenshots
+
+| Main (GPS-synced) | Settings | Floating chip over JS8Call |
+| --- | --- | --- |
+| ![Main screen](docs/screenshots/main.png) | ![Settings](docs/screenshots/settings.png) | ![Floating chip over JS8Call](docs/screenshots/overlay.png) |
+
+![Landscape](docs/screenshots/landscape.png)
+
+---
+
 ## Build from source
 
 ```bash
@@ -72,12 +82,16 @@ on Android it combines the fix's UTC timestamp with `SystemClock.elapsedRealtime
 to produce a **fix-age-adjusted** trusted time.
 
 - Preferred: `offset = plugin.trustedTime − plugin.deviceTime` (same emission).
-- Fallback (plugin unavailable): `offset = fixTimestamp − deviceTimeWhenReceived`,
-  with any measured fix age folded back out. A forced high-accuracy fix is delivered
-  fresh, so this is normally within a few hundred ms.
+- Fallback (plugin unavailable): `offset = fixTimestamp − deviceTimeWhenReceived`.
+  A forced high-accuracy `getCurrentPosition` drives the GNSS hardware and returns
+  a *current* fix, so we treat it as fresh. Without the monotonic clock there's no
+  way to separate a stale fix from a wrong system clock, so the fallback doesn't
+  try — it just trusts the fix timestamp.
 
 `trustedUtcNow() = DateTime.now().toUtc() + offset`. The offset and last-sync time
 are in-memory only; a restart falls back to the system clock until the next fix.
+Both offset paths are pure functions (`gpsOffsetFromTrustedTime`,
+`gpsOffsetFromRawFix`) covered by `test/gps_offset_test.dart`.
 
 ## Files
 

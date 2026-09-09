@@ -1,23 +1,23 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 import 'time_format.dart';
 
-/// Compact / expanded sizes for the floating chip, in **dp**. Kept here so the
-/// controller (which calls `showOverlay`) and the widget (which calls
-/// `resizeOverlay`) agree. `showOverlay` wants pixels, `resizeOverlay` wants dp.
-const int kOverlayCompactWDp = 188;
-const int kOverlayCompactHDp = 56;
-const int kOverlayExpandedWDp = 240;
+/// Compact / expanded sizes for the floating chip, in **dp**. Shared with the
+/// controller, which sizes the initial `showOverlay` window (in pixels).
+const int kOverlayCompactWDp = 190;
+const int kOverlayCompactHDp = 58;
+const int kOverlayExpandedWDp = 244;
 const int kOverlayExpandedHDp = 176;
 
 /// Where the chip first appears (dp from the top-left). Below the status bar.
 const OverlayPosition kOverlayStartPosition = OverlayPosition(8, 54);
 
-/// Runs the floating UTC chip. Invoked from `overlayMain()` in main.dart, which
-/// is the entry point flutter_overlay_window starts in a separate engine.
+/// Runs the floating UTC chip. Invoked from `overlayMain()` in main.dart, the
+/// entry point flutter_overlay_window starts in a separate engine.
 ///
 /// This isolate has no access to the app's GPS state, so it receives the current
 /// clock offset from the main app via [FlutterOverlayWindow.shareData] and ticks
@@ -26,7 +26,6 @@ void runUtcOverlay() {
   WidgetsFlutterBinding.ensureInitialized();
   // No MaterialApp here on purpose: in the overlay engine its async Localizations
   // resolution leaves Text painted with the debug "yellow underline" fallback.
-  // The chip only needs Directionality + MediaQuery.
   runApp(
     Directionality(
       textDirection: TextDirection.ltr,
@@ -63,15 +62,9 @@ class _UtcChipState extends State<_UtcChip> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Normalise the window to the compact size in density-correct dp
-      // (`showOverlay` sizes in raw pixels; `resizeOverlay` converts from dp).
-      FlutterOverlayWindow.resizeOverlay(
-        kOverlayCompactWDp,
-        kOverlayCompactHDp,
-        true,
-      );
-      // Ask the main app to (re)send the current offset — this engine may have
-      // just been restarted by the OS with default state.
+      _resize(kOverlayCompactWDp, kOverlayCompactHDp);
+      // Ask the app to (re)send current state — this engine may have just been
+      // restarted by the OS with defaults. (A 5s heartbeat in the app backs this.)
       FlutterOverlayWindow.shareData({'action': 'request'});
     });
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -102,25 +95,41 @@ class _UtcChipState extends State<_UtcChip> {
 
   DateTime get _utcNow => DateTime.now().toUtc().add(_offset);
 
-  Future<void> _toggleExpanded() async {
+  Future<void> _resize(int wDp, int hDp) async {
+    // The overlay engine may not have registered its method channel yet right
+    // after start, so retry a few times. The chip content also clips (via the
+    // SingleChildScrollView) so a missed resize never shows an overflow banner.
+    for (var attempt = 0; attempt < 4; attempt++) {
+      try {
+        await FlutterOverlayWindow.resizeOverlay(wDp, hDp, true);
+        return;
+      } catch (e) {
+        developer.log(
+          'resizeOverlay attempt $attempt failed: $e',
+          name: 'gps_utc_clock.overlay',
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+    }
+  }
+
+  void _toggleExpanded() {
     setState(() => _expanded = !_expanded);
-    await FlutterOverlayWindow.resizeOverlay(
+    _resize(
       _expanded ? kOverlayExpandedWDp : kOverlayCompactWDp,
       _expanded ? kOverlayExpandedHDp : kOverlayCompactHDp,
-      true,
     );
   }
 
-  /// The overlay engine can't call `closeOverlay()` (main-engine only), so it
-  /// asks the app to do it. If that message doesn't get through, the Settings
-  /// toggle is always a reliable way to turn the chip off.
+  /// Best-effort close. The overlay engine can't call `closeOverlay()` itself,
+  /// so it asks the app; the Settings toggle is the guaranteed off switch.
   Future<void> _close() =>
       FlutterOverlayWindow.shareData({'action': 'disable'});
 
   Widget _miniButton(String label, VoidCallback onTap) => GestureDetector(
     onTap: onTap,
     child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(8),
@@ -135,6 +144,7 @@ class _UtcChipState extends State<_UtcChip> {
   @override
   Widget build(BuildContext context) {
     final accent = _synced ? _mint : _amber;
+
     return Align(
       alignment: Alignment.topLeft,
       child: GestureDetector(
@@ -148,76 +158,80 @@ class _UtcChipState extends State<_UtcChip> {
             border: Border.all(color: accent.withValues(alpha: 0.55)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    formatTime24(_utcNow),
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      fontFeatures: [FontFeature.tabularFigures()],
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 3),
-                    child: Text(
-                      'UTC',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (_expanded) ...[
-                const SizedBox(height: 6),
-                Text(
-                  formatDateIso(_utcNow),
-                  style: const TextStyle(fontSize: 11, color: Colors.white70),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  _synced
-                      ? 'GPS-synced · ${_syncedAt == null ? 'now' : formatAgo(DateTime.now().difference(_syncedAt!))}'
-                      : 'System clock · not GPS-verified',
-                  style: TextStyle(fontSize: 11, color: accent),
-                ),
-                const SizedBox(height: 8),
+          // Clip rather than overflow if resizeOverlay didn't take effect.
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _miniButton('Collapse', _toggleExpanded),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    _miniButton('Close', _close),
+                    Text(
+                      formatTime24(_utcNow),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontFeatures: [FontFeature.tabularFigures()],
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 3),
+                      child: Text(
+                        'UTC',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'or turn off in the app Settings',
-                  style: TextStyle(fontSize: 9, color: Colors.white38),
-                ),
+                if (_expanded) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    formatDateIso(_utcNow),
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _synced
+                        ? 'GPS-synced · ${_syncedAt == null ? 'now' : formatAgo(DateTime.now().difference(_syncedAt!))}'
+                        : 'System clock · not GPS-verified',
+                    style: TextStyle(fontSize: 11, color: accent),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _miniButton('Collapse', _toggleExpanded),
+                      const SizedBox(width: 8),
+                      _miniButton('Close', _close),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'or turn off in the app Settings',
+                    style: TextStyle(fontSize: 9, color: Colors.white38),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

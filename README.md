@@ -6,12 +6,24 @@ correct the displayed clock from a fresh GPS satellite fix.
 
 Android first; the code is structured so an iOS build is a small change (see below).
 
-## Install the APK
+---
 
-Grab `gps-utc-clock-vX.Y.Z.apk` from the [latest release](../../releases/latest)
-and sideload it (you'll need "install unknown apps" enabled for your browser or
-file manager). The APK is signed with a debug key — Android will warn about the
-installer source; that's expected for a sideloaded utility.
+## ⬇️ Download the APK
+
+### **[Download gps-utc-clock.apk](https://github.com/doodlecomms/gps_utc_clock/releases/latest/download/gps-utc-clock.apk)**
+
+[![Latest release](https://img.shields.io/github/v/release/doodlecomms/gps_utc_clock?label=latest%20release&sort=semver)](https://github.com/doodlecomms/gps_utc_clock/releases/latest)
+[![Download APK](https://img.shields.io/badge/download-gps--utc--clock.apk-2ea44f)](https://github.com/doodlecomms/gps_utc_clock/releases/latest/download/gps-utc-clock.apk)
+
+That link always serves the newest release. Or browse every version on the
+**[Releases page](https://github.com/doodlecomms/gps_utc_clock/releases)** (also
+linked in the right-hand sidebar of the repo home page).
+
+**Installing:** open the `.apk` on your Android phone and allow "install unknown
+apps" for whatever opened it (browser / Files). It's signed with a debug key, so
+Android warns about the source — expected for a sideloaded utility.
+
+---
 
 ## Build from source
 
@@ -85,9 +97,14 @@ git push origin v1.1.0
 ```
 
 `.github/workflows/release.yml` then builds `flutter build apk --release` and
-attaches `gps-utc-clock-v1.1.0.apk` to the GitHub Release. Signing uses the debug
-key; swap in a real keystore (`android/app/build.gradle.kts` + repo secrets)
-before any Play Store submission.
+attaches two copies to the GitHub Release:
+
+- `gps-utc-clock.apk` — constant name, so
+  `releases/latest/download/gps-utc-clock.apk` always resolves to the newest build
+- `gps-utc-clock-v1.1.0.apk` — versioned copy
+
+Signing uses the debug key; swap in a real keystore
+(`android/app/build.gradle.kts` + repo secrets) before any Play Store submission.
 
 ## License
 

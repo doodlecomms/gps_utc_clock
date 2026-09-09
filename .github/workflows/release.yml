@@ -34,12 +34,16 @@ jobs:
       # sideloading; swap in a real keystore before any Play Store upload.
       - run: flutter build apk --release
 
-      - name: Name the APK after the tag
+      - name: Stage the APK (constant + versioned names)
         run: |
           mkdir -p dist
-          NAME="gps-utc-clock-${GITHUB_REF_NAME:-manual}.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/${NAME}"
-          echo "Built dist/${NAME}"
+          # Constant name -> stable "download latest" permalink:
+          #   .../releases/latest/download/gps-utc-clock.apk
+          cp build/app/outputs/flutter-apk/app-release.apk dist/gps-utc-clock.apk
+          # Versioned copy so a downloaded file says which version it is.
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "dist/gps-utc-clock-${GITHUB_REF_NAME:-manual}.apk"
+          ls -lh dist/
 
       - name: Attach APK to the GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -47,6 +51,12 @@ jobs:
         with:
           files: dist/*.apk
           generate_release_notes: true
+          body: |
+            ### Download
+
+            **[⬇️ gps-utc-clock.apk](https://github.com/${{ github.repository }}/releases/latest/download/gps-utc-clock.apk)** — always points at the newest release.
+
+            Sideload it on Android (enable "install unknown apps" for your browser/file manager). Debug-key signed; Android will warn about the source — that's expected.
 
       - name: Upload APK as a build artifact
         uses: actions/upload-artifact@v4

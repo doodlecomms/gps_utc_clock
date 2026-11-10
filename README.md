@@ -12,11 +12,21 @@ Don't have Obtainium yet? [Install it first](https://obtainium.imranr.dev), then
 
 </div>
 
-A single-screen Flutter utility for verifying system-clock accuracy for **JS8Call**
-use when off-grid (no cell/Wi-Fi NTP available). It shows UTC and local time and can
-correct the displayed clock from a fresh GPS satellite fix.
+## What is this?
 
-Android first; the code is structured so an iOS build is a small change (see below).
+When you're off-grid — no cell signal, no Wi-Fi, so no NTP time sync — your
+phone's clock can drift, and that matters for **JS8Call**, which needs an
+accurate clock to decode and transmit. **GPS UTC Clock** is a single-screen
+Android app that shows live UTC and local time side by side, and lets you
+correct the displayed clock from a fresh GPS satellite fix with one tap — no
+network connection needed, just a GPS lock.
+
+A floating always-on-top chip can also show the GPS-corrected UTC time over
+JS8Call itself, so you can check or nudge its clock without switching apps
+(see [Floating UTC chip](#floating-utc-chip-android) below).
+
+Android first; the code is structured so an iOS build is a small change
+(see [iOS later](#ios-later) below).
 
 ---
 

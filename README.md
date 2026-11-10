@@ -56,6 +56,14 @@ linked in the right-hand sidebar of the repo home page).
 apps" for whatever opened it (browser / Files). It's signed with a debug key, so
 Android warns about the source — expected for a sideloaded utility.
 
+### On a laptop? Scan this QR code
+
+<p align="center"><img src="docs/qr/latest-release.png" alt="QR code linking to the latest release APK" width="200"></p>
+
+Scan it with your phone's camera to jump straight to the newest
+`gps-utc-clock.apk` — handy when you're reading this on a laptop and want the
+app on your phone without typing a URL or emailing yourself a link.
+
 ---
 
 ## Screenshots

@@ -193,11 +193,10 @@ git push origin v1.2.0
 ```
 
 `.github/workflows/release.yml` then builds `flutter build apk --release` and
-attaches two copies to the GitHub Release:
-
-- `gps-utc-clock.apk` — constant name, so
-  `releases/latest/download/gps-utc-clock.apk` always resolves to the newest build
-- `gps-utc-clock-vX.Y.Z.apk` — versioned copy
+attaches `gps-utc-clock.apk` to the GitHub Release. The name never changes, so
+`releases/latest/download/gps-utc-clock.apk` always resolves to the newest build.
+Only one APK is attached on purpose: with two, Obtainium asks users which one
+to install.
 
 Signing uses the debug key; swap in a real keystore
 (`android/app/build.gradle.kts` + repo secrets) before any Play Store submission.

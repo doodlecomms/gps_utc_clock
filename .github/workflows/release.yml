@@ -34,15 +34,14 @@ jobs:
       # sideloading; swap in a real keystore before any Play Store upload.
       - run: flutter build apk --release
 
-      - name: Stage the APK (constant + versioned names)
+      - name: Stage the APK
         run: |
           mkdir -p dist
           # Constant name -> stable "download latest" permalink:
           #   .../releases/latest/download/gps-utc-clock.apk
+          # Attach only ONE APK: with two, Obtainium asks users to pick one.
+          # The version comes from the release tag.
           cp build/app/outputs/flutter-apk/app-release.apk dist/gps-utc-clock.apk
-          # Versioned copy so a downloaded file says which version it is.
-          cp build/app/outputs/flutter-apk/app-release.apk \
-            "dist/gps-utc-clock-${GITHUB_REF_NAME:-manual}.apk"
           ls -lh dist/
 
       - name: Attach APK to the GitHub Release

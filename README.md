@@ -1,5 +1,17 @@
 # GPS UTC Clock
 
+<div align="center">
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/doodlecomms/gps_utc_clock">
+  <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Add to Obtainium" height="56">
+</a>
+
+Don't have Obtainium yet? [Install it first](https://obtainium.imranr.dev), then come back and tap the badge.
+
+**[Obtainium](https://obtainium.imranr.dev) is the best and preferred way to install this app** — it downloads the app straight from this repo's releases and checks for updates for you, so you're told when a new version is out and can update with one tap. With Obtainium installed, you tap the badge on your phone, then **Add**, then **Install**. See [Install](#install) for details.
+
+</div>
+
 A single-screen Flutter utility for verifying system-clock accuracy for **JS8Call**
 use when off-grid (no cell/Wi-Fi NTP available). It shows UTC and local time and can
 correct the displayed clock from a fresh GPS satellite fix.
@@ -8,9 +20,30 @@ Android first; the code is structured so an iOS build is a small change (see bel
 
 ---
 
-## ⬇️ Download the APK
+## Install
 
-### **[Download gps-utc-clock.apk](https://github.com/doodlecomms/gps_utc_clock/releases/latest/download/gps-utc-clock.apk)**
+### With Obtainium (best, preferred)
+
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/doodlecomms/gps_utc_clock">
+  <img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Add to Obtainium" height="48">
+</a>
+
+Don't have Obtainium yet? [Install it first](https://obtainium.imranr.dev), then come back and tap the badge.
+
+[Obtainium](https://obtainium.imranr.dev) is a free, open-source Android app that
+installs apps straight from their GitHub releases and keeps checking for updates,
+so you always know when a new build of this app is out.
+
+1. Install Obtainium (link above) if you haven't already.
+2. On your phone, tap the badge above — Obtainium opens with this app already
+   filled in. Tap **Add**.
+   (If the badge doesn't open Obtainium, open Obtainium, tap **Add App**, and
+   paste in `https://github.com/doodlecomms/gps_utc_clock`.)
+3. Tap **Install**, and allow installing unknown apps when Android asks.
+
+### Direct download
+
+#### **[Download gps-utc-clock.apk](https://github.com/doodlecomms/gps_utc_clock/releases/latest/download/gps-utc-clock.apk)**
 
 [![Latest release](https://img.shields.io/github/v/release/doodlecomms/gps_utc_clock?label=latest%20release&sort=semver)](https://github.com/doodlecomms/gps_utc_clock/releases/latest)
 [![Download APK](https://img.shields.io/badge/download-gps--utc--clock.apk-2ea44f)](https://github.com/doodlecomms/gps_utc_clock/releases/latest/download/gps-utc-clock.apk)
